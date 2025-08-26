@@ -286,6 +286,18 @@ async function computePortfolioPerformanceFromSnapshot(items) {
         } else if (q.previousClose != null && !Number.isNaN(q.previousClose)) {
           latestClose = q.previousClose;
         }
+        // If quote data is stale or missing, pull last close from historical endpoint
+        const tsMs = q.timestamp ? q.timestamp * 1000 : null;
+        const isStale = tsMs ? (Date.now() - tsMs > 24 * 60 * 60 * 1000) : false;
+        if ((latestClose == null || isStale) && sym) {
+          try {
+            const hist = await fetchJson(`${API_BASE}/historical-price-full/${sym}?timeseries=1&apikey=${API_KEY}`, { noCache: true });
+            const rec = hist && (Array.isArray(hist) ? hist[0] : (hist.historical ? hist.historical[0] : null));
+            if (rec && rec.close != null && !Number.isNaN(rec.close)) {
+              latestClose = rec.close;
+            }
+          } catch {}
+        }
       }
     } catch {}
     if (buyPrice == null || latestClose == null) {
