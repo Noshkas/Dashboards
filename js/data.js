@@ -242,6 +242,18 @@ async function computePortfolioPerformanceFromSnapshot(items) {
         } else if (q.previousClose != null && !Number.isNaN(q.previousClose)) {
           latestClose = q.previousClose;
         }
+        // If quote data is stale or missing, pull last close from historical endpoint
+        const tsMs = q.timestamp ? q.timestamp * 1000 : null;
+        const isStale = tsMs ? (Date.now() - tsMs > 24 * 60 * 60 * 1000) : false;
+        if ((latestClose == null || isStale) && sym) {
+          try {
+            const hist = await fetchJson(`${API_BASE}/historical-price-full/${sym}?timeseries=1&apikey=${API_KEY}`, { noCache: true });
+            const rec = hist && (Array.isArray(hist) ? hist[0] : (hist.historical ? hist.historical[0] : null));
+            if (rec && rec.close != null && !Number.isNaN(rec.close)) {
+              latestClose = rec.close;
+            }
+          } catch {}
+        }
       }
     } catch {}
     if (buyPrice == null || latestClose == null) {
@@ -281,13 +293,14 @@ async function computePortfolioPerformanceFromSnapshot(items) {
 async function resolveEntryPrice(sym, ts) {
   try {
     const dateStr = ymd(new Date(ts || Date.now()));
-    // Prefer historical daily close for the buy date
-    const histUrl = `${API_BASE}/historical-price-full/${sym}?from=${dateStr}&to=${dateStr}&apikey=${API_KEY}`;
+    // Fetch recent closes up to the buy date to handle non-trading days
+    const histUrl = `${API_BASE}/historical-price-full/${sym}?to=${dateStr}&timeseries=5&apikey=${API_KEY}`;
     const data = await fetchJson(histUrl, { noCache: true }).catch(() => null);
     const recs = data && (Array.isArray(data) ? data : data.historical);
     if (Array.isArray(recs) && recs.length) {
-      const close = recs[0] && recs[0].close;
-      if (close != null && !Number.isNaN(close)) return close;
+      // Take the most recent close on or before the provided date
+      const rec = recs.find(r => r && r.close != null && !Number.isNaN(r.close));
+      if (rec) return rec.close;
     }
   } catch {}
   // Fallback to current quote/previousClose

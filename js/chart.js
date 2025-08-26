@@ -22,6 +22,12 @@ function showChart(card, sym) {
     oldCloseBtn.style.display = 'none';
   }
 
+  // Hide return and home buttons when in chart creation mode
+  const oldReturnBtn = card.querySelector('button.return-btn');
+  if (oldReturnBtn) oldReturnBtn.style.display = 'none';
+  const oldHomeBtn = card.querySelector('button.home-btn');
+  if (oldHomeBtn) oldHomeBtn.style.display = 'none';
+
   // Create chart container
   const container = el('div', 'chart-container');
 
