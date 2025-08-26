@@ -1,0 +1,933 @@
+/*
+  This stylesheet defines a modern look and feel for the stock detail view.  It
+  includes subtle shadows, rounded corners and responsive spacing.  The
+  chart area in particular is designed to work both in the default card
+  view and when toggled into the dedicated chart mode.  Improvements made
+  here focus on clean typography, balanced spacing and interactive states
+  such as hover effects.
+*/
+* { box-sizing: border-box; }
+html,body {
+  /* Allow the document to grow beyond the viewport so the user can
+     scroll back to the top even after many posts are added.  Using
+     min-height rather than a fixed height removes the vertical
+     constraint introduced by the original flex layout. */
+  min-height:100%;
+  margin:0;
+  padding:0;
+  background:#f8f9fa;
+}
+body {
+  /* Remove the flex centering so the page can scroll naturally.
+     The wrapper element handles centering in search view, while
+     blogview uses normal document flow.  Keep typography
+     consistent across views. */
+  font-family:'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  line-height:1.4;
+}
+
+.rounded-input {
+  width:280px;
+  padding:24px 40px;
+  border:none;
+  border-radius:60px;
+  font-size:1.4rem;
+  font-weight:600;
+  outline:none;
+  background:#fff;
+  box-shadow:0 4px 32px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
+  text-transform:uppercase;
+  text-align:center;
+  letter-spacing:0.08em;
+  transition:all 0.2s ease;
+  /* Center the search input horizontally and position it roughly
+     one quarter down the viewport.  The top margin uses
+     viewport units so that the input remains centered on larger
+     screens while leaving breathing room above.  In blogview the
+     input is removed entirely. */
+  display:block;
+  position:fixed;
+  top:50%;
+  left:50%;
+  transform:translate(-50%, -50%);
+  margin:0;
+}
+.rounded-input:focus {
+  transform:translate(-50%, -50%) translateY(-1px);
+  box-shadow:0 8px 40px rgba(0,0,0,.12), 0 2px 4px rgba(0,0,0,.04);
+}
+
+.wrapper {
+  position:fixed;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  pointer-events:none;
+  /* Provide top and bottom spacing in the normal search view.  The
+     margin is removed in blogview to allow posts to sit flush
+     beneath the card header. */
+  margin-top:80px;
+  margin-bottom:80px;
+}
+.card {
+  width:760px;
+  min-height:480px;
+  border-radius:40px;
+  background:#fff;
+  box-shadow:0 20px 60px rgba(0,0,0,.08), 0 4px 12px rgba(0,0,0,.04);
+  display:flex;
+  flex-direction:column;
+  opacity:0;
+  transform:scale(.95) translateY(20px);
+  animation:slideUp .5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  /* Allow overflow so that shipped posts can expand the card height
+     naturally.  Previously this was hidden to keep the card
+     fixed, but stacked posts need room. */
+  overflow:visible;
+  pointer-events:auto;
+  position:relative;
+}
+@keyframes slideUp {
+  to { opacity:1; transform:scale(1) translateY(0); }
+}
+
+/* Header styles */
+.header {
+  background:linear-gradient(to bottom, #f8f9fb 0%, #f4f5f8 100%);
+  padding:44px 56px 32px;
+  border-bottom:1px solid #e8eaed;
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  /* Match the card's roundness on the top edges.  Without these
+     properties the gradient background bleeds into squared
+     corners when posts are appended below the card, causing the
+     header to look flat.  Applying only the top corners keeps
+     the bottom edge straight while rounding the top. */
+  border-top-left-radius:40px;
+  border-top-right-radius:40px;
+}
+.symbol {
+  font-size:0.875rem;
+  font-weight:700;
+  letter-spacing:.2em;
+  color:#9ca3af;
+  text-transform:uppercase;
+}
+.cname {
+  font-size:1.75rem;
+  font-weight:800;
+  color:#111827;
+  margin:4px 0;
+}
+.price {
+  font-size:3rem;
+  font-weight:700;
+  color:#10b981;
+  margin:12px 0 8px 0;
+  display:flex;
+  align-items:baseline;
+  gap:12px;
+}
+.price.negative { color:#ef4444; }
+.price.neutral  { color:#111827; }
+.price-change {
+  font-size:1.1rem;
+  font-weight:600;
+  padding:4px 12px;
+  border-radius:20px;
+  background:rgba(16,185,129,.1);
+  color:#10b981;
+}
+.price-change.negative {
+  background:rgba(239,68,68,.1);
+  color:#ef4444;
+}
+.meta {
+  display:flex;
+  gap:16px;
+  font-size:0.9rem;
+  color:#6b7280;
+  font-weight:500;
+  margin-top:8px;
+}
+.meta span {
+  padding:4px 10px;
+  background:#f3f4f6;
+  border-radius:12px;
+}
+
+/* Info card grid */
+.cards {
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));
+  gap:16px;
+  padding:32px 56px 24px;
+}
+.info {
+  background:#f9fafb;
+  border-radius:20px;
+  padding:20px 24px;
+  border:1px solid #f3f4f6;
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  transition:all 0.2s ease;
+}
+.info:hover {
+  transform:translateY(-2px);
+  box-shadow:0 8px 24px rgba(0,0,0,.06);
+  border-color:#e5e7eb;
+  background:#fff;
+}
+.info-title {
+  font-size:0.8rem;
+  color:#9ca3af;
+  font-weight:600;
+  text-transform:uppercase;
+  letter-spacing:0.05em;
+}
+.info-val {
+  font-size:1.375rem;
+  font-weight:700;
+  color:#111827;
+}
+.info-val.positive { color:#10b981; }
+.info-val.negative { color:#ef4444; }
+
+/* Description section */
+.desc-section {
+  padding:0 56px 40px;
+}
+.desc-title {
+  font-size:0.9rem;
+  font-weight:700;
+  color:#6b7280;
+  text-transform:uppercase;
+  letter-spacing:0.05em;
+  margin:0 0 16px 0;
+}
+.desc {
+  background:#f9fafb;
+  border-radius:20px;
+  border:1px solid #f3f4f6;
+  padding:20px 28px;
+  color:#374151;
+  font-size:1.05rem;
+  line-height:1.6;
+  max-height:100px;
+  overflow:auto;
+  -webkit-overflow-scrolling:touch;
+}
+/* Hide scrollbars cross-browser */
+.desc, .desc * {
+  scrollbar-width:none !important;
+  -ms-overflow-style:none !important;
+}
+.desc::-webkit-scrollbar { display:none; }
+.desc *::-webkit-scrollbar { display:none; }
+
+/* Loading and error states */
+.loading, .error {
+  margin:48px 56px;
+  font-size:1.1rem;
+  color:#6b7280;
+}
+.loading {
+  font-style:italic;
+  opacity:.8;
+}
+.error {
+  color:#ef4444;
+  font-weight:500;
+}
+
+/* Buttons */
+.close-btn, .plus-btn, .return-btn {
+  position:absolute;
+  top:24px;
+  background:#fff;
+  border:1.5px solid #e5e7eb;
+  border-radius:50%;
+  width:44px;
+  height:44px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  font-size:1.75rem;
+  transition:all 0.2s ease;
+  box-shadow:0 2px 8px rgba(0,0,0,.04);
+  line-height:1;
+  padding:0;
+  font-family:inherit;
+}
+.close-btn {
+  right:28px;
+  color:#6b7280;
+}
+.close-btn:hover {
+  background:#fee2e2;
+  border-color:#fca5a5;
+  color:#ef4444;
+  transform:scale(1.05);
+}
+.plus-btn {
+  right:84px;
+  color:#10b981;
+  font-size:1.5rem;
+  font-weight:600;
+}
+.return-btn {
+  right:140px;
+  color:#6b7280;
+  font-size:1.25rem;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.return-btn:hover {
+  background:#dbeafe;
+  border-color:#93c5fd;
+  color:#1d4ed8;
+  transform:scale(1.05);
+}
+.home-btn {
+  position:absolute;
+  top:24px;
+  right:196px;
+  background:#fff;
+  border:1.5px solid #e5e7eb;
+  border-radius:50%;
+  width:44px;
+  height:44px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  font-size:1.25rem;
+  transition:all 0.2s ease;
+  box-shadow:0 2px 8px rgba(0,0,0,.04);
+  line-height:1;
+  padding:0;
+  font-family:inherit;
+  color:#6b7280;
+}
+.home-btn svg { width:22px; height:22px; display:block; }
+.home-btn:hover { background:#f3f4f6; border-color:#e5e7eb; color:#111827; transform:scale(1.05); }
+.auth-btn {
+  position:absolute;
+  top:24px;
+  left:28px;
+  background:#fff;
+  border:1.5px solid #e5e7eb;
+  border-radius:20px;
+  padding:8px 12px;
+  font-size:0.85rem;
+  font-weight:600;
+  color:#374151;
+  cursor:pointer;
+  box-shadow:0 2px 8px rgba(0,0,0,.04);
+  transition:all .2s ease;
+}
+.auth-btn:hover { background:#f3f4f6; }
+.plus-btn:hover {
+  background:#d1fae5;
+  border-color:#6ee7b7;
+  color:#059669;
+  transform:scale(1.05);
+}
+
+/* In chart mode, the close button floats over the chart with a
+   translucent background so it doesn't obstruct the view */
+.card.chart-mode .close-btn {
+  background:rgba(255,255,255,0.7);
+  border-color:rgba(229,231,235,0.8);
+  color:#6b7280;
+  /* Match the height of the timeframe selection bar.  The overlay is
+     roughly 38px tall (30px button height plus 4px top/bottom
+     padding), so set the close button to that size. */
+  width:38px;
+  height:38px;
+}
+.card.chart-mode .close-btn:hover {
+  background:rgba(255,255,255,0.9);
+  border-color:rgba(229,231,235,0.9);
+  color:#111827;
+}
+
+/* Expander for chart/options */
+.expander {
+  position:absolute;
+  right:84px;
+  top:80px;
+  z-index:100;
+  min-width:150px;
+  background:#fff;
+  border-radius:20px;
+  box-shadow:0 10px 40px rgba(0,0,0,.1), 0 2px 8px rgba(0,0,0,.04);
+  border:1px solid #e5e7eb;
+  display:flex;
+  flex-direction:column;
+  padding:6px;
+  animation:expandPop .25s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes expandPop {
+  from { opacity:0; transform:scale(.9) translateY(-8px); }
+  to   { opacity:1; transform:scale(1) translateY(0); }
+}
+.expander-btn {
+  background:none;
+  border:none;
+  font-family:inherit;
+  font-size:1rem;
+  font-weight:600;
+  color:#374151;
+  padding:10px 20px;
+  cursor:pointer;
+  border-radius:14px;
+  text-align:center;
+  transition:all 0.15s ease;
+  /* Ensure the clickable area spans the full width of the expander */
+  display:block;
+  width:100%;
+}
+.expander-btn:hover {
+  background:#f3f4f6;
+  color:#10b981;
+}
+
+/* An alternate placement for expanders that should appear anchored to
+   the left side of the card (e.g. triggered from the tools button). */
+.expander-left {
+  left:84px;
+  top:80px;
+  right:auto;
+}
+
+/* Tools button styling for the chart overlay.  It appears as a
+   standalone round button similar in spirit to the close button,
+   but located on the left side of the timeframe bar. */
+.tools-btn {
+  width:32px;
+  height:32px;
+  padding:0;
+  border-radius:50%;
+  border:1.5px solid #e5e7eb;
+  background:rgba(255,255,255,0.7);
+  color:#10b981;
+  font-size:1.2rem;
+  font-weight:600;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  transition:all 0.2s ease;
+  line-height:1;
+  font-family:inherit;
+}
+.tools-btn:hover {
+  background:rgba(255,255,255,0.9);
+  border-color:#d1fae5;
+  color:#059669;
+}
+
+/* When points mode is active, highlight the tools button to indicate
+   the current drawing mode. */
+.tools-btn.active {
+  background:#10b981;
+  border-color:#10b981;
+  color:#ffffff;
+}
+.tools-btn.active:hover {
+  background:#059669;
+  border-color:#059669;
+  color:#ffffff;
+}
+
+/* Chart mode styles */
+.card.chart-mode .header,
+.card.chart-mode .cards,
+.card.chart-mode .desc-section,
+.card.chart-mode .plus-btn {
+  display:none;
+}
+.card.chart-mode {
+  background:#fff;
+  /* Chart mode uses the entire card area for the chart */
+  min-height:520px;
+  display:flex;
+  flex-direction:column;
+}
+
+
+/* Hide the original close button in chart mode.  We add a new
+   close button inside the timeframe selector instead. */
+.card.chart-mode > .close-btn {
+  display:none;
+}
+.chart-container {
+  /* Make the chart container fill the available card space.  Use relative
+     positioning so that overlay controls can be absolutely positioned */
+  flex:1;
+  position:relative;
+  padding:0;
+  display:flex;
+  flex-direction:column;
+  gap:0;
+  opacity:0;
+  animation:fadeIn 0.3s ease forwards;
+}
+@keyframes fadeIn { to { opacity:1; } }
+.timeframe-buttons {
+  position:absolute;
+  top:12px;
+  left:50%;
+  transform:translateX(-50%);
+  display:flex;
+  gap:4px;
+  padding:4px 8px;
+  /* Increased transparency to allow more of the chart to show through */
+  background:rgba(255,255,255,0.6);
+  border-radius:16px;
+  box-shadow:0 2px 8px rgba(0,0,0,0.05);
+  z-index:5;
+}
+
+/* Exit button integrated into the timeframe selector.  This round
+   button closes the chart view and returns to the previous screen. */
+.exit-btn {
+  width:32px;
+  height:32px;
+  padding:0;
+  border-radius:50%;
+  border:1.5px solid #e5e7eb;
+  background:rgba(255,255,255,0.7);
+  color:#ef4444;
+  font-size:1.3rem;
+  font-weight:600;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  transition:all 0.2s ease;
+  line-height:1;
+  font-family:inherit;
+}
+.exit-btn:hover {
+  background:rgba(255,255,255,0.9);
+  border-color:#fecaca;
+  color:#b91c1c;
+}
+.timeframe-btn {
+  padding:8px 16px;
+  border:none;
+  background:none;
+  font-size:0.875rem;
+  font-weight:600;
+  color:#6b7280;
+  cursor:pointer;
+  transition:all 0.15s ease;
+  border-radius:12px;
+}
+.timeframe-btn:hover {
+  background:#f3f4f6;
+  color:#374151;
+}
+.timeframe-btn.active {
+  background:#10b981;
+  color:#fff;
+}
+.chart-area {
+  position:relative;
+  /* Fill available height of the container.  In chart mode, the chart
+     should occupy the entire card without its own border or background. */
+  flex:1;
+  background:none;
+  border:none;
+  border-radius:0;
+  overflow:hidden;
+}
+.chart-canvas {
+  position:absolute;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+}
+.chart-tooltip {
+  position:absolute;
+  background:rgba(17,24,39,0.95);
+  color:#fff;
+  padding:10px 14px;
+  border-radius:12px;
+  font-size:0.875rem;
+  pointer-events:none;
+  opacity:0;
+  transition:opacity 0.15s ease;
+  z-index:10;
+  box-shadow:0 4px 16px rgba(0,0,0,0.2);
+}
+.chart-tooltip.visible { opacity:1; }
+.tooltip-date {
+  font-size:0.75rem;
+  color:#9ca3af;
+  margin-bottom:4px;
+}
+.tooltip-price {
+  font-weight:700;
+  font-size:1rem;
+}
+
+/* Ship button appears below the stock card (outside the card) in
+   blogview chart mode.  When clicked it captures the current
+   chart canvas (including user-drawn lines and active indicators)
+   and renders it as a static post in the blogview. */
+/* Ship (Shipp) button ships the current analysis to the posts section.
+   It uses a semi-transparent style to avoid overwhelming the chart. */
+.ship-btn {
+  /* Provide bottom margin so the button does not sit flush with
+     the bottom of the card.  This spacing improves visual
+     separation between the chart and the button as well as any
+     shipped posts that follow. */
+  margin:24px auto 24px auto;
+  padding:12px 28px;
+  background:rgba(16,185,129,0.15);
+  color:#10b981;
+  font-size:1rem;
+  font-weight:600;
+  border:2px solid rgba(16,185,129,0.3);
+  border-radius:28px;
+  cursor:pointer;
+  display:block;
+  backdrop-filter:blur(4px);
+  box-shadow:0 2px 6px rgba(0,0,0,0.05);
+  transition:background 0.2s ease, color 0.2s ease;
+}
+.ship-btn:hover {
+  background:rgba(16,185,129,0.25);
+  color:#059669;
+}
+
+/* Posts section holds all shipped chart snapshots in blogview. */
+/* Posts container stacks posts vertically beneath the main overview. */
+.posts-container {
+  padding:0 56px 32px;
+  display:flex;
+  flex-direction:column;
+  gap:24px;
+  /* Increase top margin so posts sit further below the header */
+  margin-top:60px;
+}
+/* Hide posts while in chart mode */
+.card.chart-mode .posts-container {
+  display:none;
+}
+/* Base styling for any post (chart or text). */
+.post {
+  background:#ffffff;
+  border:1px solid #e5e7eb;
+  border-radius:24px;
+  /* Slightly larger padding for a more comfortable appearance */
+  padding:20px;
+  box-shadow:0 8px 16px rgba(0,0,0,0.05);
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  position:relative;
+}
+.post-header {
+  font-size:0.9rem;
+  font-weight:600;
+  color:#374151;
+  margin-bottom:4px;
+}
+/* Information bar displayed in chart posts showing price, TRI and
+   selected indicator values.  Uses a smaller font and wraps
+   content on narrow widths. */
+.post-info {
+  font-size:0.85rem;
+  color:#374151;
+  margin-bottom:8px;
+  display:flex;
+  flex-wrap:wrap;
+  gap:12px;
+  align-items:center;
+}
+.post-info > span { display:inline-flex; align-items:center; line-height:1; }
+/* Legend for posted charts */
+.post-legend { display:flex; flex-wrap:wrap; gap:10px; margin-top:4px; align-items:center; }
+.legend-item { display:flex; align-items:center; gap:6px; font-size:0.8rem; color:#374151; background:#f3f4f6; border:1px solid #e5e7eb; border-radius:10px; padding:4px 8px; line-height:1; }
+.legend-swatch {
+  width:10px;
+  height:10px;
+  border-radius:50%;
+  border:1px solid rgba(0,0,0,0.1);
+  display:inline-block;
+}
+/* Mini chart canvas used in chart posts.  Maintain the same
+   aspect ratio as the main chart but scale down to fit the post. */
+.mini-chart-canvas {
+  width:100%;
+  aspect-ratio:760/480;
+  display:block;
+  border-radius:16px;
+}
+/* Ensure chart posts are positioned relative so tooltips can be
+   absolutely positioned within them. */
+.chart-post {
+  position:relative;
+}
+.chart-post img {
+  width:100%;
+  aspect-ratio:760/480;
+  object-fit:cover;
+  border-radius:16px;
+}
+.text-post .text-content {
+  font-size:1rem;
+  line-height:1.6;
+  color:#374151;
+  white-space:pre-wrap;
+  /* Add a bit of space above the first line of text */
+  margin-top:4px;
+}
+/* Editing state should look identical to normal text */
+.text-post .text-content[contenteditable="true"] { outline:none; border:none; background:transparent; box-shadow:none; padding:0; }
+.text-post .text-content[contenteditable="true"]:focus { outline:none; }
+
+/* Analysis info bar displayed under the interactive chart. */
+.analysis-info {
+  margin:8px 24px 0 24px;
+  padding:10px 0;
+  display:flex;
+  flex-wrap:wrap;
+  gap:16px;
+  font-size:0.85rem;
+  color:#374151;
+  border-top:1px solid #f3f4f6;
+}
+.analysis-info span {
+  margin-right:12px;
+}
+
+/* Comments */
+.post-comments {
+  margin-top:8px;
+  padding-top:8px;
+  border-top:1px solid #f3f4f6;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+.comment-item { font-size:0.9rem; color:#374151; background:#f9fafb; border:1px solid #e5e7eb; border-radius:16px; padding:8px 10px; white-space:pre-wrap; }
+.comment-item[contenteditable="true"] { outline:none; }
+/* Separate comment post card appearance and connector */
+.comment-post { margin-left:40px; position:relative; }
+.comment-post::before { content:""; position:absolute; left:-20px; top:-12px; width:20px; height:2px; background:#e5e7eb; border-radius:2px; }
+.comment-post::after { content:""; position:absolute; left:-20px; top:-12px; width:2px; height:12px; background:#e5e7eb; border-radius:2px; }
+.comment-editor { margin-top:8px; display:flex; flex-direction:column; gap:8px; }
+
+/* News picker layout and items */
+.news-toolbar { margin-top:6px; margin-bottom:4px; }
+.news-filter { flex:1; border:1px solid #e5e7eb; border-radius:10px; padding:8px 10px; font-family:inherit; }
+.news-list { display:flex; flex-direction:column; gap:10px; }
+.news-item { display:grid; grid-template-columns:42px 1fr; gap:10px; padding:12px 14px; border:1px solid #e5e7eb; border-radius:16px; background:#ffffff; box-shadow:0 1px 4px rgba(0,0,0,0.04); cursor:pointer; transition:transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease, border-color 0.15s ease; }
+.news-item:hover { transform:translateY(-1px); box-shadow:0 4px 16px rgba(0,0,0,0.06); }
+.news-item.selected { border-color:#10b981; box-shadow:0 0 0 2px rgba(16,185,129,0.2), 0 6px 20px rgba(0,0,0,0.08); background:#ffffff; }
+.news-thumb { width:42px; height:42px; border-radius:12px; overflow:hidden; border:1px solid #e5e7eb; display:flex; align-items:center; justify-content:center; background:#f9fafb; }
+.news-thumb img { width:100%; height:100%; object-fit:cover; }
+.news-content { display:flex; flex-direction:column; gap:4px; }
+.news-title { font-weight:700; font-size:0.95rem; color:#0f172a; line-height:1.2; }
+.news-meta { display:flex; align-items:center; gap:8px; font-size:0.8rem; color:#64748b; }
+.news-meta-ico { width:14px; height:14px; border-radius:50%; border:1px solid #e5e7eb; }
+.news-snippet { font-size:0.85rem; color:#374151; opacity:.9; }
+/* Hide scrollbars inside editor overlay */
+.text-editor, .text-editor * { scrollbar-width:none !important; -ms-overflow-style:none !important; }
+.text-editor::-webkit-scrollbar, .text-editor *::-webkit-scrollbar { display:none; }
+
+/* Text editor overlay for writing notes/analysis. */
+.text-editor {
+  position:absolute;
+  top:50%;
+  left:50%;
+  transform:translate(-50%, -50%);
+  width:72%;
+  max-width:760px;
+  background:#ffffff;
+  border-radius:32px;
+  box-shadow:0 12px 32px rgba(0,0,0,0.15);
+  /* Increase internal padding for a more comfortable writing area */
+  padding:28px 28px 24px;
+  max-height:80vh;
+  overflow:auto;
+  z-index:200;
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
+/* Portfolio editor refinements */
+.portfolio-editor { max-width:720px; gap:12px; }
+.portfolio-header { display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
+.portfolio-title { font-weight:800; color:#111827; font-size:1.05rem; }
+.portfolio-sub { color:#6b7280; font-weight:600; font-size:0.9rem; }
+.portfolio-form { display:grid; grid-template-columns:1fr 1fr auto; gap:10px 12px; align-items:center; }
+.portfolio-list { display:grid; grid-template-columns:1fr auto; align-items:center; gap:8px 12px; }
+.portfolio-chip { display:inline-flex; align-items:center; gap:8px; background:#f9fafb; border:1px solid #e5e7eb; padding:10px 12px; border-radius:12px; font-weight:600; color:#374151; }
+.portfolio-chip .qty { color:#6b7280; font-weight:700; }
+.btn-ghost-sm { background:#ffffff; border:1px solid #e5e7eb; color:#374151; border-radius:10px; padding:6px 10px; font-size:0.85rem; cursor:pointer; }
+.btn-ghost-sm:hover { background:#f3f4f6; }
+.btn-ghost-sm.active { background:#10b981; border-color:#10b981; color:#ffffff; }
+.portfolio-footer { display:flex; align-items:center; justify-content:space-between; margin-top:6px; }
+.link-muted { background:none; border:none; color:#6b7280; font-weight:700; cursor:pointer; padding:6px 8px; border-radius:8px; }
+.link-muted:hover { background:#f3f4f6; }
+.error-text { color:#ef4444; font-size:0.85rem; }
+.text-input {
+  width:100%;
+  min-height:160px;
+  font-size:1rem;
+  padding:12px;
+  border:none;
+  border-radius:12px;
+  resize:none;
+  outline:none;
+  font-family:inherit;
+  background:transparent;
+  box-shadow:none;
+}
+.post-btn, .cancel-btn {
+  padding:10px 20px;
+  border:none;
+  border-radius:20px;
+  font-weight:600;
+  cursor:pointer;
+  font-size:0.95rem;
+}
+.post-btn {
+  background:#10b981;
+  color:#ffffff;
+}
+.post-btn:hover {
+  background:#059669;
+}
+.cancel-btn {
+  background:#f3f4f6;
+  color:#374151;
+}
+.cancel-btn:hover {
+  background:#e5e7eb;
+}
+
+/* Highlight active technical indicator buttons in the tools menu */
+.expander-btn.active {
+  background:#10b981;
+  color:#ffffff;
+}
+
+/* Kings form styling */
+.kings-overlay { gap:20px; position:relative; }
+.kings-progress { display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; }
+.kings-progress .seg { height:6px; background:#e5e7eb; border-radius:999px; }
+.kings-progress .seg.active { background:#10b981; }
+.kings-step-title { font-weight:800; color:#111827; font-size:1.05rem; margin-top:2px; }
+.kings-section-subtitle { color:#6b7280; font-weight:600; font-size:0.9rem; margin-top:-6px; }
+.kings-step { display:block; }
+.kings-field { background:#f9fafb; border:1px solid #f3f4f6; border-radius:16px; padding:14px; display:flex; flex-direction:column; gap:10px; margin-bottom:12px; }
+.kings-label { font-weight:700; color:#374151; font-size:0.95rem; }
+.kings-options { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:12px; }
+.kings-option { background:#ffffff; border:1px solid #e5e7eb; border-radius:14px; padding:12px 16px; font-weight:600; color:#374151; cursor:pointer; transition:all .15s ease; text-align:left; }
+.kings-option:hover { background:#f3f4f6; }
+.kings-option.active { background:#10b981; border-color:#10b981; color:#ffffff; box-shadow:0 4px 14px rgba(16,185,129,.25); }
+.kings-option.active::after { content:'\2713'; font-weight:800; margin-left:8px; }
+.kings-footer { position:sticky; bottom:-16px; background:linear-gradient(to top, #fff 70%, rgba(255,255,255,0)); padding-top:8px; }
+.kings-total-badge { position:absolute; right:24px; top:24px; background:#111827; color:#fff; border-radius:999px; padding:8px 12px; font-weight:800; font-size:0.9rem; box-shadow:0 6px 20px rgba(0,0,0,.12); }
+.kings-chart-canvas { width:100%; height:340px; display:block; border-radius:16px; }
+
+/* Context options for posts (optionclick) */
+.post-options {
+  position:absolute;
+  z-index:9999;
+  min-width:140px;
+  background:#fff;
+  border-radius:12px;
+  box-shadow:0 10px 40px rgba(0,0,0,.1), 0 2px 8px rgba(0,0,0,.04);
+  border:1px solid #e5e7eb;
+  display:flex;
+  flex-direction:column;
+  padding:6px;
+}
+.post-options .opt-btn {
+  background:none;
+  border:none;
+  font-family:inherit;
+  font-size:0.9rem;
+  font-weight:600;
+  color:#374151;
+  padding:10px 14px;
+  cursor:pointer;
+  border-radius:10px;
+  text-align:left;
+  transition:all 0.15s ease;
+}
+.post-options .opt-btn:hover { background:#f3f4f6; color:#10b981; }
+
+/* Mark badge */
+.mark-badge { margin-left:8px; padding:2px 8px; border-radius:999px; font-size:0.75rem; font-weight:700; display:inline-flex; align-items:center; }
+.mark-good { background:rgba(16,185,129,.12); color:#059669; border:1px solid rgba(16,185,129,.25); }
+.mark-neutral { background:#f3f4f6; color:#6b7280; border:1px solid #e5e7eb; }
+.mark-bad { background:rgba(239,68,68,.12); color:#b91c1c; border:1px solid rgba(239,68,68,.25); }
+.mark-indicator { position:absolute; top:12px; right:12px; width:10px; height:10px; border-radius:50%; border:2px solid #ffffff; box-shadow:0 2px 8px rgba(0,0,0,.06); }
+
+/* Blogview container wraps the card and the posts.  It aligns
+   content vertically and centers the card horizontally while
+   allowing posts to sit below without resizing the card. */
+.blogview {
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:flex-start;
+  width:100%;
+  height:auto;
+  padding-top:80px;
+  padding-bottom:80px;
+}
+/* In blog view, the wrapper should take a normal flow position
+   rather than being fixed to the viewport. */
+.blogview .wrapper {
+  position:relative;
+  pointer-events:auto;
+}
+
+/* TRI dashboard card (light design) */
+.tri-post {
+  margin:24px 56px 0 56px;
+  background:#ffffff;
+  color:#111827;
+  border:1px solid #e5e7eb;
+  border-radius:20px;
+  box-shadow:0 8px 24px rgba(0,0,0,0.06);
+  padding:16px 18px 18px;
+}
+.tri-title { font-size:0.95rem; font-weight:800; color:#111827; margin:0 0 12px 0; letter-spacing:0.02em; }
+.tri-grid { display:grid; grid-template-columns:120px repeat(4, 1fr); gap:10px 12px; align-items:center; }
+.tri-colhead { font-size:0.75rem; text-transform:uppercase; color:#6b7280; letter-spacing:0.06em; font-weight:700; }
+.tri-symbol { display:inline-flex; align-items:center; gap:8px; background:#f9fafb; border:1px solid #e5e7eb; padding:8px 10px; border-radius:12px; color:#374151; font-weight:700; }
+.tri-badge { display:inline-flex; align-items:center; justify-content:center; min-width:64px; padding:6px 10px; border-radius:999px; font-weight:800; font-size:0.85rem; }
+.tri-badge.pos { background:#ecfdf5; color:#059669; border:1px solid #a7f3d0; }
+.tri-badge.neg { background:#fef2f2; color:#b91c1c; border:1px solid #fecaca; }
+.tri-badge.neu { background:#f3f4f6; color:#6b7280; border:1px solid #e5e7eb; }
+.tri-footnote { margin-top:8px; color:#6b7280; font-size:0.8rem; }
+
+/* Portfolio grid: 4 columns (Symbol, Change, PnL, Value) */
+.portfolio-grid { display:grid; grid-template-columns:120px repeat(3, 1fr); gap:10px 12px; align-items:center; }
+/* Calendar post (dashboard) */
+.calendar-grid { display:grid; grid-template-columns:160px 1fr; gap:8px 12px; align-items:flex-start; }
+.cal-date { font-weight:700; color:#111827; }
+.cal-items { display:flex; flex-direction:column; gap:8px; }
+.cal-item { display:flex; align-items:center; gap:10px; background:#f9fafb; border:1px solid #e5e7eb; border-radius:12px; padding:8px 10px; }
+.cal-badge { font-size:0.7rem; font-weight:800; border-radius:999px; padding:3px 10px; letter-spacing:.2px; }
+.cal-badge-earn { background:#dbeafe; color:#1e40af; }
+.cal-badge-div { background:#dcfce7; color:#166534; }
+.cal-meta { color:#6b7280; font-size:0.85rem; }
+.cal-symbol { font-weight:800; font-size:0.95rem; color:#111827; }
