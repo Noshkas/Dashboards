@@ -3,8 +3,7 @@
   This file handles all data persistence and external API interactions
 */
 
-// Storage keys
-const STORAGE_KEY = 'stock_blog_posts_v1';
+// Firestore doc used to persist all posts
 const FIREBASE_DOC = 'posts_store_v1';
 
 // Track the currently visible post index for each symbol
@@ -26,19 +25,24 @@ function savePostsToStorage() {
         });
       })
       .catch(err => console.error('Firestore not ready', err));
+
+        setDoc(ref, shippedPosts).catch(() => {});
+      })
+      .catch(() => {});
   }
 }
 
-function loadPostsFromStorage() {
-  let loadedLocal = false;
+async function loadPostsFromStorage() {
+  if (!window.__firebaseReady || !window.__firebase) return;
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const data = JSON.parse(raw);
-      if (data && typeof data === 'object') {
-        for (const sym in data) shippedPosts[sym] = data[sym];
-        loadedLocal = true;
-      }
+    const { db } = await window.__firebaseReady;
+    const { getDoc, doc } = window.__firebase;
+    const ref = doc(db, 'stock_posts', FIREBASE_DOC);
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      const cloud = snap.data() || {};
+      for (const k in shippedPosts) delete shippedPosts[k];
+      for (const sym in cloud) shippedPosts[sym] = cloud[sym];
     }
   } catch (e) { /* ignore parse errors */ }
 
@@ -69,6 +73,8 @@ function loadPostsFromStorage() {
       })
       .catch(err => console.error('Firestore not ready', err));
   }
+  } catch {}
+
 }
 
 // Firestore: one-document-per-post push to avoid 1 MiB doc cap
@@ -278,6 +284,18 @@ async function computePortfolioPerformanceFromSnapshot(items) {
         } else if (q.previousClose != null && !Number.isNaN(q.previousClose)) {
           latestClose = q.previousClose;
         }
+        // If quote data is stale or missing, pull last close from historical endpoint
+        const tsMs = q.timestamp ? q.timestamp * 1000 : null;
+        const isStale = tsMs ? (Date.now() - tsMs > 24 * 60 * 60 * 1000) : false;
+        if ((latestClose == null || isStale) && sym) {
+          try {
+            const hist = await fetchJson(`${API_BASE}/historical-price-full/${sym}?timeseries=1&apikey=${API_KEY}`, { noCache: true });
+            const rec = hist && (Array.isArray(hist) ? hist[0] : (hist.historical ? hist.historical[0] : null));
+            if (rec && rec.close != null && !Number.isNaN(rec.close)) {
+              latestClose = rec.close;
+            }
+          } catch {}
+        }
       }
     } catch {}
     if (buyPrice == null || latestClose == null) {
@@ -317,13 +335,14 @@ async function computePortfolioPerformanceFromSnapshot(items) {
 async function resolveEntryPrice(sym, ts) {
   try {
     const dateStr = ymd(new Date(ts || Date.now()));
-    // Prefer historical daily close for the buy date
-    const histUrl = `${API_BASE}/historical-price-full/${sym}?from=${dateStr}&to=${dateStr}&apikey=${API_KEY}`;
+    // Fetch recent closes up to the buy date to handle non-trading days
+    const histUrl = `${API_BASE}/historical-price-full/${sym}?to=${dateStr}&timeseries=5&apikey=${API_KEY}`;
     const data = await fetchJson(histUrl, { noCache: true }).catch(() => null);
     const recs = data && (Array.isArray(data) ? data : data.historical);
     if (Array.isArray(recs) && recs.length) {
-      const close = recs[0] && recs[0].close;
-      if (close != null && !Number.isNaN(close)) return close;
+      // Take the most recent close on or before the provided date
+      const rec = recs.find(r => r && r.close != null && !Number.isNaN(r.close));
+      if (rec) return rec.close;
     }
   } catch {}
   // Fallback to current quote/previousClose
