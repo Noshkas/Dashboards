@@ -11,11 +11,21 @@ const currentPostIndices = {};
 
 // Storage functions
 function savePostsToStorage() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(shippedPosts));
+  } catch (e) { /* ignore quota/security errors */ }
+
   if (window.__firebaseReady && window.__firebase) {
     window.__firebaseReady
       .then(({ db }) => {
         const { setDoc, doc } = window.__firebase;
         const ref = doc(db, 'stock_posts', FIREBASE_DOC);
+        return setDoc(ref, shippedPosts).catch(err => {
+          console.error('Firestore save failed', err);
+        });
+      })
+      .catch(err => console.error('Firestore not ready', err));
+
         setDoc(ref, shippedPosts).catch(() => {});
       })
       .catch(() => {});
@@ -34,7 +44,37 @@ async function loadPostsFromStorage() {
       for (const k in shippedPosts) delete shippedPosts[k];
       for (const sym in cloud) shippedPosts[sym] = cloud[sym];
     }
+  } catch (e) { /* ignore parse errors */ }
+
+  if (window.__firebaseReady && window.__firebase) {
+    window.__firebaseReady
+      .then(({ db }) => {
+        const { getDoc, doc, setDoc } = window.__firebase;
+        const ref = doc(db, 'stock_posts', FIREBASE_DOC);
+        return getDoc(ref)
+          .then(snap => {
+            if (snap.exists()) {
+              const cloud = snap.data() || {};
+              for (const sym in shippedPosts) {
+                if (!(sym in cloud)) cloud[sym] = shippedPosts[sym];
+              }
+              for (const k in shippedPosts) delete shippedPosts[k];
+              for (const sym in cloud) shippedPosts[sym] = cloud[sym];
+              try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(shippedPosts));
+              } catch {}
+            } else if (!loadedLocal) {
+              setDoc(ref, shippedPosts).catch(err => {
+                console.error('Firestore init failed', err);
+              });
+            }
+          })
+          .catch(err => console.error('Firestore load failed', err));
+      })
+      .catch(err => console.error('Firestore not ready', err));
+  }
   } catch {}
+
 }
 
 // Firestore: one-document-per-post push to avoid 1 MiB doc cap
@@ -52,7 +92,9 @@ async function pushPostToFirestore(sym, post) {
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });
-  } catch { /* noop */ }
+  } catch (err) {
+    console.error('Failed to push post to Firestore', err);
+  }
 }
 
 // Authentication
