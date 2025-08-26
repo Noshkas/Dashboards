@@ -3,8 +3,7 @@
   This file handles all data persistence and external API interactions
 */
 
-// Storage keys
-const STORAGE_KEY = 'stock_blog_posts_v1';
+// Firestore doc used to persist all posts
 const FIREBASE_DOC = 'posts_store_v1';
 
 // Track the currently visible post index for each symbol
@@ -12,60 +11,30 @@ const currentPostIndices = {};
 
 // Storage functions
 function savePostsToStorage() {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(shippedPosts));
-  } catch (e) { /* ignore quota/security errors */ }
-
-  // Firestore sync (best-effort)
   if (window.__firebaseReady && window.__firebase) {
-    window.__firebaseReady.then(({ db }) => {
-      const { setDoc, doc } = window.__firebase;
-      const ref = doc(db, 'stock_posts', FIREBASE_DOC);
-      setDoc(ref, shippedPosts).catch(() => {});
-    }).catch(() => {});
+    window.__firebaseReady
+      .then(({ db }) => {
+        const { setDoc, doc } = window.__firebase;
+        const ref = doc(db, 'stock_posts', FIREBASE_DOC);
+        setDoc(ref, shippedPosts).catch(() => {});
+      })
+      .catch(() => {});
   }
 }
 
-function loadPostsFromStorage() {
-  let loadedLocal = false;
+async function loadPostsFromStorage() {
+  if (!window.__firebaseReady || !window.__firebase) return;
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const data = JSON.parse(raw);
-      if (data && typeof data === 'object') {
-        for (const sym in data) shippedPosts[sym] = data[sym];
-        loadedLocal = true;
-      }
+    const { db } = await window.__firebaseReady;
+    const { getDoc, doc } = window.__firebase;
+    const ref = doc(db, 'stock_posts', FIREBASE_DOC);
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      const cloud = snap.data() || {};
+      for (const k in shippedPosts) delete shippedPosts[k];
+      for (const sym in cloud) shippedPosts[sym] = cloud[sym];
     }
-  } catch (e) { /* ignore parse errors */ }
-
-  // Try fetching from Firestore and merge (Firebase wins on conflicts)
-  if (window.__firebaseReady && window.__firebase) {
-    window.__firebaseReady.then(({ db }) => {
-      const { getDoc, doc } = window.__firebase;
-      const ref = doc(db, 'stock_posts', FIREBASE_DOC);
-      getDoc(ref).then(snap => {
-        if (snap.exists()) {
-          const cloud = snap.data() || {};
-          // Merge: ensure we don't drop existing local symbols
-          for (const sym in shippedPosts) {
-            if (!(sym in cloud)) cloud[sym] = shippedPosts[sym];
-          }
-          // Replace in-memory with merged cloud
-          for (const k in shippedPosts) delete shippedPosts[k];
-          for (const sym in cloud) shippedPosts[sym] = cloud[sym];
-          // Persist back locally so next load is fast
-          try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(shippedPosts));
-          } catch {}
-        } else if (!loadedLocal) {
-          // Initialize empty doc to establish structure
-          const { setDoc } = window.__firebase;
-          setDoc(ref, shippedPosts).catch(() => {});
-        }
-      }).catch(() => {});
-    }).catch(() => {});
-  }
+  } catch {}
 }
 
 // Firestore: one-document-per-post push to avoid 1 MiB doc cap
@@ -92,54 +61,41 @@ function ensureAuth() {
     if (!window.__firebaseReady || !window.__firebase) return;
     window.__firebaseReady.then(({ auth }) => {
       if (auth.currentUser) return;
-      const overlay = el('div', 'text-editor');
-      overlay.style.maxWidth = '520px';
-      const title = el('div', null, 'Welcome back');
-      title.style.fontWeight = '800';
-      title.style.fontSize = '1.1rem';
-      title.style.textAlign = 'center';
-      const subtitle = el('div', null, 'Sign in to sync your posts');
-      subtitle.style.color = '#6b7280';
-      subtitle.style.textAlign = 'center';
+
+      // Backdrop overlay
+      const overlay = el('div', 'auth-overlay');
+      // Dialog card
+      const box = el('div', 'auth-card');
+
+      const title = el('h2', null, 'Welcome back');
+      const subtitle = el('p', null, 'Sign in to sync your posts');
       const email = document.createElement('input');
       email.type = 'email';
       email.placeholder = 'Email';
-      email.className = 'text-input';
-      email.style.background = '#f9fafb';
-      email.style.border = '1px solid #e5e7eb';
-      email.style.borderRadius = '12px';
+      email.className = 'auth-input';
       const pass = document.createElement('input');
       pass.type = 'password';
       pass.placeholder = 'Password';
-      pass.className = 'text-input';
-      pass.style.background = '#f9fafb';
-      pass.style.border = '1px solid #e5e7eb';
-      pass.style.borderRadius = '12px';
-      const row = el('div');
-      row.style.display = 'flex';
-      row.style.gap = '12px';
-      row.style.justifyContent = 'center';
+      pass.className = 'auth-input';
+
+      const actions = el('div', 'auth-actions');
       const signIn = el('button', 'post-btn', 'Sign in');
       const create = el('button', 'cancel-btn', 'Register');
-      row.appendChild(signIn);
-      row.appendChild(create);
-      overlay.appendChild(title);
-      overlay.appendChild(subtitle);
-      overlay.appendChild(email);
-      overlay.appendChild(pass);
-      overlay.appendChild(row);
-      // Attach to the central card on page if present, else body
-      const card = document.querySelector('.card') || document.body;
-      card.appendChild(overlay);
-      requestAnimationFrame(() => {
-        try {
-          overlay.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        } catch {}
-      });
+      actions.appendChild(signIn);
+      actions.appendChild(create);
+
+      box.appendChild(title);
+      box.appendChild(subtitle);
+      box.appendChild(email);
+      box.appendChild(pass);
+      box.appendChild(actions);
+      overlay.appendChild(box);
+      document.body.appendChild(overlay);
+
       signIn.onclick = async () => {
         try {
           const { signInWithEmailAndPassword } = window.__firebase || {};
-          const { auth } = window.__firebase || {};
+          const { auth } = await window.__firebaseReady;
           await signInWithEmailAndPassword(auth, email.value.trim(), pass.value);
           overlay.remove();
         } catch {
@@ -149,7 +105,7 @@ function ensureAuth() {
       create.onclick = async () => {
         try {
           const { createUserWithEmailAndPassword } = window.__firebase || {};
-          const { auth } = window.__firebase || {};
+          const { auth } = await window.__firebaseReady;
           await createUserWithEmailAndPassword(auth, email.value.trim(), pass.value);
           overlay.remove();
         } catch {
