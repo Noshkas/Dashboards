@@ -337,13 +337,14 @@ async function computePortfolioPerformanceFromSnapshot(items) {
 async function resolveEntryPrice(sym, ts) {
   try {
     const dateStr = ymd(new Date(ts || Date.now()));
-    // Prefer historical daily close for the buy date
-    const histUrl = `${API_BASE}/historical-price-full/${sym}?from=${dateStr}&to=${dateStr}&apikey=${API_KEY}`;
+    // Fetch recent closes up to the buy date to handle non-trading days
+    const histUrl = `${API_BASE}/historical-price-full/${sym}?to=${dateStr}&timeseries=5&apikey=${API_KEY}`;
     const data = await fetchJson(histUrl, { noCache: true }).catch(() => null);
     const recs = data && (Array.isArray(data) ? data : data.historical);
     if (Array.isArray(recs) && recs.length) {
-      const close = recs[0] && recs[0].close;
-      if (close != null && !Number.isNaN(close)) return close;
+      // Take the most recent close on or before the provided date
+      const rec = recs.find(r => r && r.close != null && !Number.isNaN(r.close));
+      if (rec) return rec.close;
     }
   } catch {}
   // Fallback to current quote/previousClose
