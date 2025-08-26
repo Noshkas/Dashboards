@@ -92,54 +92,41 @@ function ensureAuth() {
     if (!window.__firebaseReady || !window.__firebase) return;
     window.__firebaseReady.then(({ auth }) => {
       if (auth.currentUser) return;
-      const overlay = el('div', 'text-editor');
-      overlay.style.maxWidth = '520px';
-      const title = el('div', null, 'Welcome back');
-      title.style.fontWeight = '800';
-      title.style.fontSize = '1.1rem';
-      title.style.textAlign = 'center';
-      const subtitle = el('div', null, 'Sign in to sync your posts');
-      subtitle.style.color = '#6b7280';
-      subtitle.style.textAlign = 'center';
+
+      // Backdrop overlay
+      const overlay = el('div', 'auth-overlay');
+      // Dialog card
+      const box = el('div', 'auth-card');
+
+      const title = el('h2', null, 'Welcome back');
+      const subtitle = el('p', null, 'Sign in to sync your posts');
       const email = document.createElement('input');
       email.type = 'email';
       email.placeholder = 'Email';
-      email.className = 'text-input';
-      email.style.background = '#f9fafb';
-      email.style.border = '1px solid #e5e7eb';
-      email.style.borderRadius = '12px';
+      email.className = 'auth-input';
       const pass = document.createElement('input');
       pass.type = 'password';
       pass.placeholder = 'Password';
-      pass.className = 'text-input';
-      pass.style.background = '#f9fafb';
-      pass.style.border = '1px solid #e5e7eb';
-      pass.style.borderRadius = '12px';
-      const row = el('div');
-      row.style.display = 'flex';
-      row.style.gap = '12px';
-      row.style.justifyContent = 'center';
+      pass.className = 'auth-input';
+
+      const actions = el('div', 'auth-actions');
       const signIn = el('button', 'post-btn', 'Sign in');
       const create = el('button', 'cancel-btn', 'Register');
-      row.appendChild(signIn);
-      row.appendChild(create);
-      overlay.appendChild(title);
-      overlay.appendChild(subtitle);
-      overlay.appendChild(email);
-      overlay.appendChild(pass);
-      overlay.appendChild(row);
-      // Attach to the central card on page if present, else body
-      const card = document.querySelector('.card') || document.body;
-      card.appendChild(overlay);
-      requestAnimationFrame(() => {
-        try {
-          overlay.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        } catch {}
-      });
+      actions.appendChild(signIn);
+      actions.appendChild(create);
+
+      box.appendChild(title);
+      box.appendChild(subtitle);
+      box.appendChild(email);
+      box.appendChild(pass);
+      box.appendChild(actions);
+      overlay.appendChild(box);
+      document.body.appendChild(overlay);
+
       signIn.onclick = async () => {
         try {
           const { signInWithEmailAndPassword } = window.__firebase || {};
-          const { auth } = window.__firebase || {};
+          const { auth } = await window.__firebaseReady;
           await signInWithEmailAndPassword(auth, email.value.trim(), pass.value);
           overlay.remove();
         } catch {
@@ -149,7 +136,7 @@ function ensureAuth() {
       create.onclick = async () => {
         try {
           const { createUserWithEmailAndPassword } = window.__firebase || {};
-          const { auth } = window.__firebase || {};
+          const { auth } = await window.__firebaseReady;
           await createUserWithEmailAndPassword(auth, email.value.trim(), pass.value);
           overlay.remove();
         } catch {
